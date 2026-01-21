@@ -8,6 +8,11 @@
 - Open-source “template” usable by small teams
 - Clear senior-level engineering patterns (idempotency, failure modes, tests, lineage)
 
+# **Requirements for Template for end users**
+
+- Must guide user on exports (e.g. FOCUS exports from https://docs.aws.amazon.com/cur/latest/userguide/dataexports-create-standard.html) - there's options to select daily / hourly / etc - also format as Parquet vs. CSV.
+- Also should make system easily reproducible for any users, no local version dependency hell if possible.
+
 ---
 
 # **Functional Requirements**
