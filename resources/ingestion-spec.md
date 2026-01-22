@@ -12,6 +12,9 @@
 - Users configure AWS FOCUS export in S3 (FOCUS 1.2, Parquet, Daily cadence by default).
 - Exports can be delayed; data might be unavailable on the first run.
 - CUR inputs are supported but normalized to FOCUS before Bronze.
+- AWS standard export layout is expected, e.g.:
+  - `exports/<export_name>/data/billing_period=YYYY-MM/<export_id>/...parquet`
+  - `exports/<export_name>/metadata/billing_period=YYYY-MM/<export_id>/...Manifest*.json`
 
 ## **Configuration (project.yml)**
 
@@ -25,10 +28,11 @@ source:
   cadence: daily         # daily|hourly|monthly
   s3:
     bucket: my-bucket
-    prefix: cost-exports/focus/
+    prefix: exports/finops_focus_export/
     region: us-east-1    # optional if inferred
     profile: default     # optional
-    partition_regex: "date=(\\d{4}-\\d{2}-\\d{2})"  # optional
+    partition_regex: "billing_period=(\\d{4}-\\d{2})"  # optional
+    export_id_regex: "billing_period=\\d{4}-\\d{2}/([^/]+)/" # optional
   local_input_path: input/  # optional fallback
   availability_lag_hours: 24 # default for daily
   backfill_window_days: 7     # default lookback for late files
@@ -45,32 +49,44 @@ source:
 ## **Retrieval Flow (AWS S3 default)**
 
 1) Determine target window based on `cadence`, `availability_lag_hours`, and `backfill_window_days`.
-2) List S3 keys under `s3.prefix` for the target window.
-3) Derive `snapshot_date` from key path using `partition_regex`; fall back to S3 LastModified date if no match.
-4) Download or copy each file into local Bronze location (immutable).
-5) If no files found, write a manifest with status `no_data` and exit 0.
+2) List S3 keys under `s3.prefix/metadata/` for the target window and prefer `*Manifest-FOCUS.json`.
+3) Derive `billing_period` with `partition_regex` and `export_id` with `export_id_regex`.
+4) Parse the manifest JSON to enumerate data file keys and expected row counts.
+5) Download or copy each file into local Bronze location (immutable).
+6) If no files found, write a manifest with status `no_data` and exit 0.
 
 ## **Bronze Layout**
 
-- Path: `bronze/focus/snapshot_date=YYYY-MM-DD/*.parquet`
+- Path: `bronze/focus/billing_period=YYYY-MM/export_id=<export_id>/*.parquet`
 - Files are immutable. Re-ingest only with `--force`.
+- Bookmark: snapshot date derivation is TBD until we confirm the next export format; revisit once a second export is available.
 
 ## **Manifest**
 
 Store at `bronze/_manifest/manifest.parquet` (or JSON for v1). Fields:
 
-- `snapshot_date`
+- `billing_period`
+- `export_id`
 - `cadence`
 - `source_type` (focus|cur)
 - `focus_version`
 - `format`
 - `file_keys` (S3 keys or local paths)
+- `manifest_keys`
 - `file_hashes`
 - `row_count`
 - `schema_version`
 - `status` (success|partial|failed|no_data)
 - `error_count`
 - `created_at`
+
+## **DuckDB Bronze (Manifest Ingestion)**
+
+- Store raw manifest JSON at `bronze/_manifest/raw/` (one per export_id).
+- Load manifest JSON into DuckDB table `bronze_focus_manifest`.
+- Create a view `bronze_focus_files` that expands manifest file lists into rows with:
+  - `billing_period`, `export_id`, `s3_key`, `local_path`, `expected_rows`.
+- Use `bronze_focus_files` to drive download/copy and to validate row counts post-ingest.
 
 ## **Validation and Schema Drift**
 

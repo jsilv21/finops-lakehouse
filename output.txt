@@ -1,0 +1,5 @@
+2026-01-21 22:37:58          4 aws-programmatic-access-test-object
+2026-01-21 22:44:32      48360 exports/finops_focus_export/data/billing_period=2026-01/2026-01-22T03:37:58.312Z-c6090eaf-c370-4ba6-aa41-f598f16c13f5/finops_focus_export-00001.snappy.parquet
+2026-01-21 22:44:32       4927 exports/finops_focus_export/metadata/billing_period=2026-01/2026-01-22T03:37:58.312Z-c6090eaf-c370-4ba6-aa41-f598f16c13f5/finops_focus_export-Manifest-FOCUS.json
+2026-01-21 22:44:32       3008 exports/finops_focus_export/metadata/billing_period=2026-01/2026-01-22T03:37:58.312Z-c6090eaf-c370-4ba6-aa41-f598f16c13f5/finops_focus_export-Manifest.json
+2026-01-21 22:44:32       3008 exports/finops_focus_export/metadata/billing_period=2026-01/finops_focus_export-Manifest.json
